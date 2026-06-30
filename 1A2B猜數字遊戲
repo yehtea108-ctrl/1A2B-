@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1A2B 猜數字遊戲</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --surface-color: #ffffff;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --border-color: #dee2e6;
+            --success-color: #28a745;
+            --base-font-size: 16px;
+            --container-width: 480px;
+        }
+
+        [data-theme="dark"] {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --text-color: #e0e0e0;
+            --primary-color: #375a7f;
+            --border-color: #333333;
+            --success-color: #4caf50;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: var(--base-font-size);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .container {
+            width: 100%;
+            max-width: var(--container-width);
+            background-color: var(--surface-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            transition: max-width 0.2s ease;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        button {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            transition: background-color 0.2s ease, transform 0.1s ease;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        button.primary {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: none;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 1.25rem;
+            text-align: center;
+            letter-spacing: 4px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .history-container {
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 16px;
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-color);
+            animation: slideDown 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        @keyframes slideDown {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-tag {
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .result-tag.win {
+            color: var(--success-color);
+        }
+
+        .status-message {
+            text-align: center;
+            margin-top: 12px;
+            min-height: 24px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <button onclick="changeSize(-2)">A-</button>
+                <button onclick="changeSize(2)">A+</button>
+                <button onclick="toggleWidth()">寬度切換</button>
+            </div>
+            <div class="control-group">
+                <button onclick="toggleTheme()">主題切換</button>
+                <button onclick="resetGame()" class="primary">重新開始</button>
+            </div>
+        </div>
+
+        <h1>1A2B 猜數字</h1>
+
+        <div class="input-section">
+            <input type="text" id="guessInput" maxlength="4" placeholder="請輸入4位不重複數字" autocomplete="off">
+            <button onclick="submitGuess()" class="primary">送出</button>
+        </div>
+
+        <div class="history-container" id="historyContainer"></div>
+
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <script>
+        var secretCode = '';
+        var isGameOver = false;
+        var fontSize = 16;
+        var isWide = false;
+
+        function generateSecretCode() {
+            var digits = ['0','1','2','3','4','5','6','7','8','9'];
+            for (var i = digits.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = digits[i];
+                digits[i] = digits[j];
+                digits[j] = temp;
+            }
+            return digits.slice(0, 4).join('');
+        }
+
+        function resetGame() {
+            secretCode = generateSecretCode();
+            isGameOver = false;
+            document.getElementById('historyContainer').innerHTML = '';
+            document.getElementById('statusMessage').textContent = '遊戲已重新開始，請輸入數字。';
+            document.getElementById('statusMessage').style.color = 'var(--text-color)';
+            document.getElementById('guessInput').value = '';
+            document.getElementById('guessInput').disabled = false;
+        }
+
+        function isValidInput(input) {
+            if (input.length !== 4) return false;
+            if (!/^\d+$/.test(input)) return false;
+            var set = new Set(input);
+            return set.size === 4;
+        }
+
+        function checkAnswer(guess, secret) {
+            var a = 0;
+            var b = 0;
+            for (var i = 0; i < 4; i++) {
+                if (guess[i] === secret[i]) {
+                    a++;
+                } else if (secret.indexOf(guess[i]) !== -1) {
+                    b++;
+                }
+            }
+            return { a: a, b: b };
+        }
+
+        function submitGuess() {
+            if (isGameOver) return;
+
+            var inputEl = document.getElementById('guessInput');
+            var guess = inputEl.value.trim();
+
+            if (!isValidInput(guess)) {
+                alert('請輸入4位不重複的數字。');
+                return;
+            }
+
+            var result = checkAnswer(guess, secretCode);
+            var historyContainer = document.getElementById('historyContainer');
+            var item = document.createElement('div');
+            item.className = 'history-item';
+            
+            var isWin = (result.a === 4);
+            item.innerHTML = '<span>' + guess + '</span><span class="result-tag ' + (isWin ? 'win' : '') + '">' + result.a + 'A' + result.b + 'B</span>';
+            
+            if (historyContainer.firstChild) {
+                historyContainer.insertBefore(item, historyContainer.firstChild);
+            } else {
+                historyContainer.appendChild(item);
+            }
+            
+            inputEl.value = '';
+
+            if (isWin) {
+                isGameOver = true;
+                inputEl.disabled = true;
+                var status = document.getElementById('statusMessage');
+                status.textContent = '正確答案，遊戲結束。';
+                status.style.color = 'var(--success-color)';
+            }
+        }
+
+        document.getElementById('guessInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitGuess();
+            }
+        });
+
+        function changeSize(offset) {
+            fontSize = Math.max(12, Math.min(24, fontSize + offset));
+            document.documentElement.style.setProperty('--base-font-size', fontSize + 'px');
+        }
+
+        function toggleWidth() {
+            isWide = !isWide;
+            document.documentElement.style.setProperty('--container-width', isWide ? '720px' : '480px');
+        }
+
+        function toggleTheme() {
+            var currentTheme = document.documentElement.getAttribute('data-theme');
+            if (currentTheme === 'dark') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', 'dark');
+            }
+        }
+
+        window.onload = resetGame;
+    </script>
+</body>
+</html>
