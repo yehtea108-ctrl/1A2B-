@@ -3,39 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>1A2B 遊戲中心</title>
+    <title>1A2B 遊戲中心 - 豪華排行版</title>
     <style>
-        body { background-color: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
-        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; width: 320px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        /* 預設深色主題 */
+        :root {
+            --bg-color: #121212;
+            --box-bg: #1e1e1e;
+            --text-color: #ffffff;
+            --primary-color: #29b6f6;
+            --accent-color: #ffb74d;
+        }
+        /* 極光綠主題 */
+        [data-theme="green"] {
+            --bg-color: #0b130e;
+            --box-bg: #142219;
+            --text-color: #e0f2f1;
+            --primary-color: #4db6ac;
+            --accent-color: #a7ffeb;
+        }
+        /* 賽博朋克主題 */
+        [data-theme="cyber"] {
+            --bg-color: #1a0033;
+            --box-bg: #2d0059;
+            --text-color: #00ffff;
+            --primary-color: #ff007f;
+            --accent-color: #ffff00;
+        }
+
+        body { background-color: var(--bg-color); color: var(--text-color); font-family: sans-serif; text-align: center; padding: 20px; transition: all 0.3s ease; }
+        .box { background: var(--box-bg); padding: 20px; border-radius: 12px; display: inline-block; width: 320px; margin-top: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); vertical-align: top; margin: 10px; }
         input { display: block; margin: 15px auto; padding: 12px; width: 80%; border-radius: 6px; border: 1px solid #333; background: #121212; color: #fff; text-align: center; font-size: 1.2rem; letter-spacing: 2px; }
-        button { padding: 12px 24px; cursor: pointer; background: #29b6f6; border: none; border-radius: 6px; font-weight: bold; margin: 5px; color: #000; font-size: 1rem; }
+        button { padding: 10px 20px; cursor: pointer; background: var(--primary-color); border: none; border-radius: 6px; font-weight: bold; margin: 5px; color: #000; font-size: 1rem; }
         button:active { opacity: 0.8; }
-        .log-item { border-bottom: 1px solid #333; padding: 8px; display: flex; justify-content: space-between; font-size: 1.1rem; font-family: monospace; }
-        #auth-area { margin-bottom: 15px; background: #222; padding: 10px; border-radius: 20px; display: inline-block; }
+        .log-item { border-bottom: 1px solid #333; padding: 8px; display: flex; justify-content: space-between; font-family: monospace; }
+        #auth-area { margin-bottom: 15px; background: var(--box-bg); padding: 10px; border-radius: 20px; display: inline-block; }
+        .badge { display: inline-block; padding: 4px 8px; background: var(--accent-color); color: #000; font-weight: bold; border-radius: 4px; font-size: 0.85rem; margin-top: 5px; }
+        .theme-btn { padding: 5px 10px; font-size: 0.8rem; background: #444; color: #fff; border: none; margin: 2px; border-radius: 4px; cursor: pointer; }
+        
+        /* 排行榜樣式 */
+        .rank-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #555; font-size: 0.95rem; }
     </style>
 </head>
 <body>
 
-    <h1>1A2B 猜數字遊戲</h1>
+    <h1>1A2B 猜數字 🏆</h1>
     
-    <div id="auth-area">
-        <span id="status" style="color: #ffb74d; font-weight: bold;">正在檢查登入狀態...</span>
-        <button id="loginBtn" style="padding: 6px 12px; font-size: 0.85rem; margin-left: 10px; display: none;">綁定 Google</button>
+    <div style="margin-bottom: 15px;">
+        <button class="theme-btn" id="theme-dark">深色模式</button>
+        <button class="theme-btn" id="theme-green" style="background:#142219; color:#4db6ac;">極光綠</button>
+        <button class="theme-btn" id="theme-cyber" style="background:#2d0059; color:#ff007f;">賽博朋克</button>
     </div>
 
-    <div id="game-area">
-        <div class="box">
-            <div id="hintMessage" style="margin-bottom:15px; color:#4fc3f7; font-weight: bold;">請輸入4位不重複數字</div>
-            <input type="text" id="userGuess" maxlength="4" pattern="\d*" inputmode="numeric" placeholder="例如 1234">
-            <button id="guessBtn">猜測</button>
-            <button id="restartBtn" style="background:#ef5350; color:#fff;">重來</button>
-            <div id="historyLogs" style="margin-top:20px; text-align: left; max-height: 200px; overflow-y: auto;"></div>
-        </div>
+    <div id="auth-area">
+        <span id="status" style="color: var(--accent-color); font-weight: bold;">正在載入...</span>
+        <button id="loginBtn" style="padding: 4px 8px; font-size: 0.8rem; display: none;">綁定 Google</button>
+    </div>
+
+    <br>
+
+    <div class="box">
+        <div id="hintMessage" style="color: var(--primary-color); font-weight: bold; min-height: 24px;">遊戲準備中...</div>
+        <div id="badgeDisplay"></div> <input type="text" id="userGuess" maxlength="4" pattern="\d*" inputmode="numeric" placeholder="輸入4位不重複數字">
+        <button id="guessBtn">猜測</button>
+        <button id="restartBtn" style="background:#ef5350; color:#fff;">重來</button>
+        <div id="historyLogs" style="margin-top:15px; text-align: left; max-height: 180px; overflow-y: auto;"></div>
+    </div>
+
+    <div class="box" style="text-align: left;">
+        <h3 style="margin-top: 0; color: var(--accent-color); text-align: center;">🏆 全球排行榜 (前10名)</h3>
+        <div id="leaderboard">載入中...</div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, query, orderByChild, limitToFirst } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDbK2ckyJP_RlAGEcTUlOfk3nlWfwDa_HQ",
@@ -43,66 +85,83 @@
             projectId: "a2b-89299",
             storageBucket: "a2b-89299.firebasestorage.app",
             messagingSenderId: "685135427869",
-            appId: "1:685135427869:web:8e6ddc7f971e84b86b89f4"
+            appId: "1:685135427869:web:8e6ddc7f971e84b86b89f4",
+            databaseURL: "https://a2b-89299-default-rtdb.asia-southeast1.firebasedatabase.app/"
         };
 
-        let auth, provider;
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getDatabase(app);
+        const provider = new GoogleAuthProvider();
+
         let answer = '';
+        let guessCount = 0;
+        let currentUser = null;
+        let gameActive = true;
 
-        try {
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            provider = new GoogleAuthProvider();
+        // --- 主題切換事件 ---
+        document.getElementById('theme-dark').onclick = () => document.documentElement.removeAttribute('data-theme');
+        document.getElementById('theme-green').onclick = () => document.documentElement.setAttribute('data-theme', 'green');
+        document.getElementById('theme-cyber').onclick = () => document.documentElement.setAttribute('data-theme', 'cyber');
 
-            // 處理跳轉登入回來的結果，並捕捉錯誤
-            getRedirectResult(auth).catch(err => {
-                if (err.code === 'auth/unauthorized-domain') {
-                    alert("提示：此網址尚未在 Firebase 控制台設定「授權網域」，請到後台將 yehtea108-ctrl.github.io 加入白名單！");
-                } else {
-                    alert("登入遇到狀況: " + err.message);
-                }
+        // --- 登入與帳號狀態監聽 ---
+        getRedirectResult(auth).catch(err => console.log(err.message));
+        
+        onAuthStateChanged(auth, (user) => {
+            const statusText = document.getElementById('status');
+            const loginBtn = document.getElementById('loginBtn');
+            if (user) {
+                currentUser = user;
+                statusText.innerText = `玩家：${user.displayName || '無名英雄'}`;
+                loginBtn.style.display = 'none';
+            } else {
+                currentUser = null;
+                statusText.innerText = "遊客模式 (成績不列入排行)";
+                loginBtn.style.display = 'inline-block';
+            }
+        });
+
+        document.getElementById('loginBtn').onclick = () => signInWithRedirect(auth, provider);
+
+        // --- Realtime Database 即時排行榜監聽 ---
+        const scoresRef = query(ref(db, 'scores'), orderByChild('guesses'), limitToFirst(10));
+        onValue(scoresRef, (snapshot) => {
+            let html = "";
+            let rankList = [];
+            
+            snapshot.forEach((childSnapshot) => {
+                rankList.push(childSnapshot.val());
             });
-
-            // 監聽登入狀態
-            onAuthStateChanged(auth, (user) => {
-                const statusText = document.getElementById('status');
-                const loginBtn = document.getElementById('loginBtn');
-                if (user) {
-                    statusText.innerText = `玩家：${user.displayName || '已登入'}`;
-                    statusText.style.color = "#81c784";
-                    loginBtn.style.display = 'none';
-                } else {
-                    statusText.innerText = "單機模式 (點擊綁定雲端)";
-                    statusText.style.color = "#aaa";
-                    loginBtn.style.display = 'inline-block';
-                }
+            
+            // Realtime Database 排序後，從小到大排列（猜測次數越少越前面）
+            rankList.forEach((data, index) => {
+                html += `<div class="rank-item">
+                    <span>${index + 1}. ${data.name}</span>
+                    <strong>${data.guesses}次 🎯</strong>
+                </div>`;
             });
-        } catch (e) {
-            document.getElementById('status').innerText = "連線失敗，切換為離線模式";
-        }
-
-        // 💡 關鍵修正：將彈出視窗改為頁面重導向（Redirect），防止被手機瀏覽器攔截卡死
-        document.getElementById('loginBtn').onclick = () => {
-            if (!auth) return alert("系統未就緒");
-            signInWithRedirect(auth, provider);
-        };
+            
+            document.getElementById('leaderboard').innerHTML = html || "暫無紀錄，快來搶頭香！";
+        });
 
         // --- 1A2B 遊戲邏輯 ---
         function restartGame() {
             let nums = ['0','1','2','3','4','5','6','7','8','9'].sort(() => 0.5 - Math.random());
             answer = nums.slice(0, 4).join('');
+            guessCount = 0;
+            gameActive = true;
             document.getElementById('historyLogs').innerHTML = '';
-            document.getElementById('hintMessage').innerText = '新遊戲開始，請猜 4 個數字！';
+            document.getElementById('badgeDisplay').innerHTML = '';
+            document.getElementById('hintMessage').innerText = '新遊戲開始，請猜4個數字！';
             document.getElementById('userGuess').value = '';
         }
 
-        function checkGuess() {
+        async function checkGuess() {
+            if (!gameActive) return;
             let g = document.getElementById('userGuess').value.trim();
-            if (!/^\d{4}$/.test(g) || new Set(g).size !== 4) {
-                alert('請輸入 4 位「不重複」的數字！');
-                return;
-            }
+            if (!/^\d{4}$/.test(g) || new Set(g).size !== 4) return alert('請輸入4位不重複數字！');
             
+            guessCount++;
             let a = 0, b = 0;
             for(let i=0; i<4; i++) {
                 if(g[i] === answer[i]) a++;
@@ -110,11 +169,32 @@
             }
             
             let logBox = document.getElementById('historyLogs');
-            logBox.innerHTML = `<div class="log-item"><span>猜測：${g}</span><span>${a}A${b}B</span></div>` + logBox.innerHTML;
+            logBox.innerHTML = `<div class="log-item"><span>#${guessCount} 猜測：${g}</span><span>${a}A${b}B</span></div>` + logBox.innerHTML;
             
             if(a === 4) {
-                document.getElementById('hintMessage').innerText = '🎉 恭喜答對！答案就是 ' + answer;
-                alert('🎉 恭喜答對！');
+                gameActive = false;
+                // 1. 頒發勝利徽章
+                let badgeName = "🥉 數字平民";
+                if(guessCount <= 4) badgeName = "🥇 1A2B 頂級神算";
+                else if(guessCount <= 7) badgeName = "🥈 數字專家";
+                
+                document.getElementById('hintMessage').innerText = `🎉 恭喜答對！共花了 ${guessCount} 次`;
+                document.getElementById('badgeDisplay').innerHTML = `<span class="badge">獲得徽章：${badgeName}</span>`;
+
+                // 2. 上傳成績至雲端排行榜
+                if (currentUser) {
+                    try {
+                        await set(ref(db, 'scores/' + currentUser.uid), {
+                            name: currentUser.displayName || "神祕玩家",
+                            guesses: guessCount,
+                            timestamp: Date.now()
+                        });
+                    } catch (e) {
+                        console.error("分數上傳失敗:", e);
+                    }
+                } else {
+                    alert(`答對了！(小提示：點上方「綁定 Google」即可將 ${guessCount}次 的紀錄送上排行榜喔！)`);
+                }
             } else {
                 document.getElementById('hintMessage').innerText = `上次結果: ${a}A${b}B`;
             }
@@ -123,7 +203,6 @@
 
         document.getElementById('guessBtn').addEventListener('click', checkGuess);
         document.getElementById('restartBtn').addEventListener('click', restartGame);
-
         restartGame();
     </script>
 </body>
