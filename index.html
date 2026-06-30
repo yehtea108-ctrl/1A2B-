@@ -2,6 +2,7 @@
 <html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1A2B 遊戲中心</title>
     <style>
         body { background-color: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
@@ -13,10 +14,9 @@
 </head>
 <body>
 
-    <h1>1A2B 遊戲系統</h1>
-    <p id="status">目前狀態：尚未登入</p>
-    
-    <button id="loginBtn" onclick="signInAnonymously(auth)">快速開始遊戲</button>
+    <h1>1A2B 猜數字</h1>
+    <p id="status">請使用 Google 帳號登入</p>
+    <button id="loginBtn">使用 Google 登入</button>
 
     <div id="game-area">
         <div class="box">
@@ -30,7 +30,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDbK2ckyJP_RlAGEcTUlOfk3nlWfwDa_HQ",
@@ -42,12 +42,18 @@
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = window.auth = getAuth(app); // 把 auth 變成全域變數讓按鈕用
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
 
-        // 監聽狀態
+        // 登入邏輯
+        document.getElementById('loginBtn').onclick = () => {
+            signInWithPopup(auth, provider).catch(err => alert("登入失敗: " + err.message));
+        };
+
+        // 狀態監控
         onAuthStateChanged(auth, (user) => {
             if (user) {
-                document.getElementById('status').innerText = `登入成功！ID: ${user.uid.substring(0,8)}...`;
+                document.getElementById('status').innerText = `歡迎回來，${user.displayName || '玩家'}`;
                 document.getElementById('loginBtn').style.display = 'none';
                 document.getElementById('game-area').style.display = 'block';
             }
