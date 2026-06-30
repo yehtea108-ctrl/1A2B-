@@ -6,11 +6,12 @@
     <title>1A2B 遊戲中心</title>
     <style>
         body { background-color: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
-        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; width: 300px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        input { display: block; margin: 15px auto; padding: 12px; width: 80%; border-radius: 6px; border: 1px solid #333; background: #121212; color: #fff; text-align: center; font-size: 1.2rem; }
+        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; width: 320px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        input { display: block; margin: 15px auto; padding: 12px; width: 80%; border-radius: 6px; border: 1px solid #333; background: #121212; color: #fff; text-align: center; font-size: 1.2rem; letter-spacing: 2px; }
         button { padding: 12px 24px; cursor: pointer; background: #29b6f6; border: none; border-radius: 6px; font-weight: bold; margin: 5px; color: #000; font-size: 1rem; }
-        .log-item { border-bottom: 1px solid #333; padding: 8px; display: flex; justify-content: space-between; font-size: 1.1rem; }
-        #auth-area { margin-bottom: 15px; }
+        button:active { opacity: 0.8; }
+        .log-item { border-bottom: 1px solid #333; padding: 8px; display: flex; justify-content: space-between; font-size: 1.1rem; font-family: monospace; }
+        #auth-area { margin-bottom: 15px; background: #222; padding: 10px; border-radius: 20px; display: inline-block; }
     </style>
 </head>
 <body>
@@ -18,17 +19,17 @@
     <h1>1A2B 猜數字遊戲</h1>
     
     <div id="auth-area">
-        <span id="status" style="color: #aaa; margin-right: 10px;">載入中...</span>
-        <button id="loginBtn" style="padding: 5px 10px; font-size: 0.8rem; display: none;">綁定 Google 帳號</button>
+        <span id="status" style="color: #ffb74d; font-weight: bold;">正在連線至 Firebase...</span>
+        <button id="loginBtn" style="padding: 6px 12px; font-size: 0.85rem; margin-left: 10px; display: none;">綁定 Google</button>
     </div>
 
     <div id="game-area">
         <div class="box">
-            <input type="text" id="userGuess" maxlength="4" placeholder="輸入4位不重複數字">
+            <div id="hintMessage" style="margin-bottom:15px; color:#4fc3f7; font-weight: bold;">請輸入4位不重複數字</div>
+            <input type="text" id="userGuess" maxlength="4" pattern="\d*" inputmode="numeric" placeholder="例如 1234">
             <button id="guessBtn">猜測</button>
             <button id="restartBtn" style="background:#ef5350; color:#fff;">重來</button>
-            <div id="hintMessage" style="margin-top:15px; color:#ffb74d; font-weight: bold;"></div>
-            <div id="historyLogs" style="margin-top:15px;"></div>
+            <div id="historyLogs" style="margin-top:20px; text-align: left; max-height: 200px; overflow-y: auto;"></div>
         </div>
     </div>
 
@@ -45,43 +46,63 @@
             appId: "1:685135427869:web:8e6ddc7f971e84b86b89f4"
         };
 
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const provider = new GoogleAuthProvider();
-
+        let auth, provider;
         let answer = '';
 
-        // --- 帳號狀態控制 ---
-        onAuthStateChanged(auth, (user) => {
-            const statusText = document.getElementById('status');
-            const loginBtn = document.getElementById('loginBtn');
-            
-            if (user) {
-                statusText.innerText = `玩家：${user.displayName || '已登入'}`;
-                loginBtn.style.display = 'none';
-            } else {
-                statusText.innerText = "目前為單機模式";
-                loginBtn.style.display = 'inline-block';
-            }
-        });
+        // 初始化 Firebase
+        try {
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            provider = new GoogleAuthProvider();
 
-        // 綁定 Google 登入按鈕
+            // 監聽登入狀態
+            onAuthStateChanged(auth, (user) => {
+                const statusText = document.getElementById('status');
+                const loginBtn = document.getElementById('loginBtn');
+                if (user) {
+                    statusText.innerText = `玩家：${user.displayName || '已登入'}`;
+                    statusText.style.color = "#81c784";
+                    loginBtn.style.display = 'none';
+                } else {
+                    statusText.innerText = "單機模式 (點擊綁定雲端)";
+                    statusText.style.color = "#aaa";
+                    loginBtn.style.display = 'inline-block';
+                }
+            });
+        } catch (e) {
+            document.getElementById('status').innerText = "Firebase 載入失敗，切換為離線模式";
+        }
+
+        // 綁定 Google 登入點擊
         document.getElementById('loginBtn').onclick = () => {
-            signInWithPopup(auth, provider).catch(err => alert("登入失敗: " + err.message));
+            if (!auth) return alert("Firebase 未正常啟動");
+            signInWithPopup(auth, provider).catch(err => {
+                // 如果是網域沒設好的錯誤，特別給予親切提示，且不影響遊戲繼續
+                if (err.code === 'auth/unauthorized-domain') {
+                    alert("提示：此網址尚未在 Firebase 後台設定「授權網域」，目前將以單機模式運行遊戲，您可以繼續遊玩！");
+                } else {
+                    alert("登入失敗: " + err.message);
+                }
+            });
         };
 
-        // --- 1A2B 遊戲核心邏輯 ---
+        // --- 1A2B 遊戲核心功能 ---
         function restartGame() {
             let nums = ['0','1','2','3','4','5','6','7','8','9'].sort(() => 0.5 - Math.random());
             answer = nums.slice(0, 4).join('');
             document.getElementById('historyLogs').innerHTML = '';
-            document.getElementById('hintMessage').innerText = '新遊戲開始，請輸入4位數字！';
+            document.getElementById('hintMessage').innerText = '新遊戲開始，請猜 4 個數字！';
             document.getElementById('userGuess').value = '';
         }
 
         function checkGuess() {
-            let g = document.getElementById('userGuess').value;
-            if (!/^\d{4}$/.test(g) || new Set(g).size !== 4) return alert('請輸入4位不重複數字');
+            let g = document.getElementById('userGuess').value.trim();
+            
+            // 驗證輸入格式
+            if (!/^\d{4}$/.test(g) || new Set(g).size !== 4) {
+                alert('請輸入 4 位「不重複」的數字！');
+                return;
+            }
             
             let a = 0, b = 0;
             for(let i=0; i<4; i++) {
@@ -89,20 +110,24 @@
                 else if(answer.includes(g[i])) b++;
             }
             
+            // 將紀錄插入到歷史欄位最上方
             let logBox = document.getElementById('historyLogs');
-            logBox.innerHTML = `<div class="log-item"><span>猜測: ${g}</span><span>${a}A${b}B</span></div>` + logBox.innerHTML;
+            logBox.innerHTML = `<div class="log-item"><span>猜測：${g}</span><span>${a}A${b}B</span></div>` + logBox.innerHTML;
             
             if(a === 4) {
-                document.getElementById('hintMessage').innerText = '🎉 恭喜答對！';
+                document.getElementById('hintMessage').innerText = '🎉 恭喜答對！答案就是 ' + answer;
+                alert('🎉 恭喜答對！');
+            } else {
+                document.getElementById('hintMessage').innerText = `上次結果: ${a}A${b}B`;
             }
             document.getElementById('userGuess').value = '';
         }
 
-        // 💡 關鍵修正：用事件監聽器綁定，按鈕絕對有反應
+        // 使用強大的監聽器綁定，杜絕 HTML onclick 失效的問題
         document.getElementById('guessBtn').addEventListener('click', checkGuess);
         document.getElementById('restartBtn').addEventListener('click', restartGame);
 
-        // 啟動遊戲
+        // 初始化一局新遊戲
         restartGame();
     </script>
 </body>
