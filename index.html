@@ -2,10 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>1A2B 猜數字遊戲</title>
-    <script>
-        var GOOGLE_CLIENT_ID = '850178876253-t4v4rb9dnbf5vs0b6hc3r2bmpbmm7a4v.apps.googleusercontent.com';
-    </script>
+    <title>1A2B 猜數字遊戲 - GitHub 雲端版</title>
     <style>
         /* 全黑深色背景主題 */
         body { 
@@ -18,6 +15,32 @@
         }
         h1, h3 { color: #ffffff; text-align: center; }
         
+        /* GitHub 雲端設定區塊 */
+        .github-space { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px dashed #6e40aa; 
+            text-align: center; 
+            background-color: #1a102f; 
+            border-radius: 8px; 
+        }
+        
+        /* 戰績統計區塊 */
+        .score-board {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .score-val {
+            color: #29b6f6;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
         /* 輸入區塊與按鈕 */
         .input-group { 
             margin: 20px 0; 
@@ -35,6 +58,7 @@
             color: #fff; 
             border-radius: 8px; 
         }
+        
         button { 
             padding: 10px 16px; 
             font-size: 16px; 
@@ -64,15 +88,6 @@
             border-radius: 6px; 
         }
         
-        /* Google 登入區塊 */
-        .google-space { 
-            margin: 20px 0; 
-            padding: 15px; 
-            border: 1px dashed #4285F4; 
-            text-align: center; 
-            background-color: #1a237e; 
-            border-radius: 8px; 
-        }
         #hintMessage { 
             text-align: center; 
             font-weight: bold; 
@@ -80,15 +95,19 @@
             margin: 10px 0; 
         }
     </style>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
-    <h1>1A2B 猜數字</h1>
+    <h1>1A2B 猜數字 (GitHub 雲端)</h1>
 
-    <div class="google-space">
-        <button id="googleLoginBtn" onclick="clickGoogleLogin()" style="background-color: #4285F4; color: white;">Google 帳號登入</button>
-        <span id="loginStatus" style="margin-left: 10px; color: #4caf50;"></span>
+    <div class="github-space">
+        <input type="password" id="ghToken" placeholder="貼上你的 GitHub Token" style="width: 80%; margin-bottom: 10px; font-size: 12px;"><br>
+        <button onclick="connectGitHub()" style="background-color: #6e40aa; color: white; font-size: 14px;">連線 GitHub 雲端存檔</button>
+        <div id="syncStatus" style="margin-top: 5px; color: #ffb74d; font-size: 12px;">尚未連線</div>
+    </div>
+
+    <div class="score-board">
+        📊 雲端戰績統計：已成功解鎖 <span id="winCount" class="score-val">0</span> 場遊戲！
     </div>
 
     <div class="input-group">
@@ -107,34 +126,85 @@
     <script>
         var answer = '';
         var gameOver = false;
-        var tokenClient;
+        var totalWins = 0;
+        
+        // 這是用來寫入戰績的 GitHub Gist ID，我預設幫你處理好了
+        var gistId = localStorage.getItem('1a2b_gist_id') || '';
 
         window.onload = function() {
+            // 自動讀取上次記住的 Token
+            var savedToken = localStorage.getItem('1a2b_gh_token');
+            if (savedToken) {
+                document.getElementById('ghToken').value = savedToken;
+                connectGitHub();
+            }
             restartGame();
-            initGoogleAuth();
         };
 
-        function initGoogleAuth() {
-            try {
-                tokenClient = google.accounts.oauth2.initTokenClient({
-                    client_id: GOOGLE_CLIENT_ID,
-                    scope: 'https://www.googleapis.com/auth/drive.appdata',
-                    callback: function(response) {
-                        if (response.access_token) {
-                            document.getElementById('loginStatus').textContent = '🟢 已連線';
-                            document.getElementById('googleLoginBtn').style.display = 'none';
-                        }
-                    }
-                });
-            } catch(e) {}
+        // 連線並讀取 GitHub 上的分數
+        function connectGitHub() {
+            var token = document.getElementById('ghToken').value.trim();
+            if (!token) {
+                alert('請先輸入 GitHub Token！');
+                return;
+            }
+            
+            document.getElementById('syncStatus').textContent = '⚡ 同步中...';
+            localStorage.setItem('1a2b_gh_token', token);
+
+            // 如果之前沒建立過存檔，就建立一個新的 Gist 檔案
+            var url = gistId ? 'https://api.github.com/gists/' + gistId : 'https://api.github.com/gists';
+            var method = gistId ? 'GET' : 'POST';
+            
+            var bodyData = gistId ? null : JSON.stringify({
+                description: "1A2B Game Score",
+                public: false,
+                files: { "score.json": { content: JSON.stringify({ wins: 0 }) } }
+            });
+
+            var headers = { 'Authorization': 'token ' + token };
+
+            fetch(url, { method: method, headers: headers, body: bodyData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.id) {
+                    gistId = data.id;
+                    localStorage.setItem('1a2b_gist_id', gistId);
+                    
+                    var content = JSON.parse(data.files["score.json"].content);
+                    totalWins = content.wins || 0;
+                    document.getElementById('winCount').textContent = totalWins;
+                    document.getElementById('syncStatus').textContent = '🟢 雲端同步成功';
+                    document.getElementById('syncStatus').style.color = '#4caf50';
+                } else {
+                    document.getElementById('syncStatus').textContent = '🔴 Token 錯誤或失效';
+                    document.getElementById('syncStatus').style.color = '#ef5350';
+                }
+            })
+            .catch(err => {
+                document.getElementById('syncStatus').textContent = '🔴 連線失敗';
+                document.getElementById('syncStatus').style.color = '#ef5350';
+            });
         }
 
-        function clickGoogleLogin() {
-            if (tokenClient) {
-                tokenClient.requestAccessToken();
-            } else {
-                alert('必須在網頁伺服器環境（HTTPS）才能執行 Google 登入。');
-            }
+        // 把新分數上傳到 GitHub
+        function saveScoreToGitHub() {
+            var token = localStorage.getItem('1a2b_gh_token');
+            if (!token || !gistId) return;
+
+            totalWins++;
+            document.getElementById('winCount').textContent = totalWins;
+
+            fetch('https://api.github.com/gists/' + gistId, {
+                method: 'PATCH',
+                headers: { 'Authorization': 'token ' + token },
+                body: JSON.stringify({
+                    files: { "score.json": { content: JSON.stringify({ wins: totalWins }) } }
+                })
+            })
+            .then(() => {
+                document.getElementById('syncStatus').textContent = '🟢 戰績已同步至 GitHub';
+            });
         }
 
         function restartGame() {
@@ -150,7 +220,6 @@
 
         function checkGuess() {
             if (gameOver) return;
-
             var inputEl = document.getElementById('userGuess');
             var guess = inputEl.value.trim();
 
@@ -159,14 +228,10 @@
                 return;
             }
 
-            var a = 0;
-            var b = 0;
+            var a = 0, b = 0;
             for (var i = 0; i < 4; i++) {
-                if (guess[i] === answer[i]) {
-                    a++;
-                } else if (answer.indexOf(guess[i]) !== -1) {
-                    b++;
-                }
+                if (guess[i] === answer[i]) a++;
+                else if (answer.indexOf(guess[i]) !== -1) b++;
             }
 
             var logBox = document.getElementById('historyLogs');
@@ -174,7 +239,6 @@
             item.className = 'history-item';
             item.innerHTML = '<span>猜測：<strong>' + guess + '</strong></span> <span style="color:#ff5252; font-weight:bold;">' + a + 'A' + b + 'B</span>';
             logBox.insertBefore(item, logBox.firstChild);
-
             inputEl.value = '';
 
             if (a === 4) {
@@ -182,6 +246,7 @@
                 inputEl.disabled = true;
                 document.getElementById('hintMessage').style.color = '#66bb6a';
                 document.getElementById('hintMessage').textContent = '🎉 恭喜答對！答案就是 ' + answer;
+                saveScoreToGitHub(); // 贏了，自動幫你寫入 GitHub 雲端！
             } else {
                 document.getElementById('hintMessage').textContent = '持續挑戰中...';
             }
