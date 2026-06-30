@@ -3,10 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <title>1A2B 遊戲中心</title>
-    <!-- 使用 Google 官方 CDN 載入 Firebase -->
+    <style>
+        body { background-color: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
+        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; width: 300px; margin-top: 20px; }
+        input { display: block; margin: 10px auto; padding: 10px; width: 80%; border-radius: 5px; border: 1px solid #333; background: #121212; color: #fff; }
+        button { padding: 10px 20px; cursor: pointer; background: #29b6f6; border: none; border-radius: 5px; font-weight: bold; margin: 5px; }
+        #game-area { display: none; }
+    </style>
+</head>
+<body>
+
+    <h1>1A2B 遊戲系統</h1>
+    <p id="status">目前狀態：尚未登入</p>
+    
+    <button id="loginBtn" onclick="signInAnonymously(auth)">快速開始遊戲</button>
+
+    <div id="game-area">
+        <div class="box">
+            <input type="text" id="userGuess" maxlength="4" placeholder="輸入4位數字">
+            <button onclick="checkGuess()">猜測</button>
+            <button onclick="restartGame()">重來</button>
+            <div id="hintMessage" style="margin-top:10px;"></div>
+            <div id="historyLogs" style="margin-top:10px;"></div>
+        </div>
+    </div>
+
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDbK2ckyJP_RlAGEcTUlOfk3nlWfwDa_HQ",
@@ -14,40 +38,28 @@
             projectId: "a2b-89299",
             storageBucket: "a2b-89299.firebasestorage.app",
             messagingSenderId: "685135427869",
-            appId: "1:685135427869:web:e022765e2415cfc86b89f4",
-            measurementId: "G-KC342WM798"
+            appId: "1:685135427869:web:8e6ddc7f971e84b86b89f4"
         };
 
         const app = initializeApp(firebaseConfig);
-        const auth = getAuth(auth);
+        const auth = window.auth = getAuth(app); // 把 auth 變成全域變數讓按鈕用
 
-        // 登入/註冊功能
-        window.authAction = async (isSignUp) => {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            try {
-                if(isSignUp) await createUserWithEmailAndPassword(auth, email, password);
-                else await signInWithEmailAndPassword(auth, email, password);
-            } catch (e) {
-                alert("錯誤: " + e.message);
-            }
-        };
-
-        window.logout = () => signOut(auth);
-
-        // 偵測登入狀態
+        // 監聽狀態
         onAuthStateChanged(auth, (user) => {
-            document.getElementById('auth-screen').style.display = user ? 'none' : 'block';
-            document.getElementById('game-screen').style.display = user ? 'block' : 'none';
+            if (user) {
+                document.getElementById('status').innerText = `登入成功！ID: ${user.uid.substring(0,8)}...`;
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('game-area').style.display = 'block';
+            }
         });
 
-        // 遊戲核心邏輯
+        // 遊戲邏輯
         let answer = '';
         window.restartGame = () => {
             let nums = ['0','1','2','3','4','5','6','7','8','9'].sort(() => 0.5 - Math.random());
             answer = nums.slice(0, 4).join('');
             document.getElementById('historyLogs').innerHTML = '';
-            document.getElementById('hintMessage').innerText = '新遊戲開始，請輸入4位數字';
+            document.getElementById('hintMessage').innerText = '新遊戲開始！';
         };
 
         window.checkGuess = () => {
@@ -64,33 +76,5 @@
         };
         restartGame();
     </script>
-    <style>
-        body { background-color: #121212; color: #fff; font-family: sans-serif; text-align: center; padding: 20px; }
-        .box { background: #1e1e1e; padding: 20px; border-radius: 10px; display: inline-block; width: 300px; }
-        input { display: block; margin: 10px auto; padding: 10px; width: 80%; border-radius: 5px; border: 1px solid #333; background: #121212; color: #fff; }
-        button { padding: 10px 20px; cursor: pointer; background: #29b6f6; border: none; border-radius: 5px; font-weight: bold; margin: 5px; }
-        #game-screen { display: none; }
-    </style>
-</head>
-<body>
-    <div id="auth-screen" class="box">
-        <h1>登入 1A2B</h1>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="密碼">
-        <button onclick="authAction(false)">登入</button>
-        <button onclick="authAction(true)">註冊</button>
-    </div>
-
-    <div id="game-screen">
-        <h1>1A2B 猜數字</h1>
-        <button onclick="logout()">登出</button>
-        <div class="box" style="margin-top:20px;">
-            <input type="text" id="userGuess" maxlength="4" placeholder="輸入4位數字">
-            <button onclick="checkGuess()">猜測</button>
-            <button onclick="restartGame()">重來</button>
-            <div id="hintMessage" style="margin-top:10px;"></div>
-            <div id="historyLogs" style="margin-top:10px;"></div>
-        </div>
-    </div>
 </body>
 </html>
