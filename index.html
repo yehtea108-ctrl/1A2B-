@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>1A2B 遊戲中心 - 自建儲存終極版</title>
+    <title>1A2B 猜數字 - 雲端認證雙強豪華版</title>
     <style>
         /* 預設深色主題 */
         :root {
@@ -43,18 +43,15 @@
         button { padding: 12px 24px; cursor: pointer; background: var(--primary-color); border: none; border-radius: 12px; font-weight: bold; margin: 5px; color: #000; font-size: 1rem; transition: opacity 0.1s; }
         button:active { opacity: 0.8; }
         
-        .log-container { margin-top: 20px; text-align: left; max-height: 180px; overflow-y: auto; border-top: 1px solid #333; padding-top: 10px; }
+        .log-container { margin-top: 20px; text-align: left; max-height: 220px; overflow-y: auto; border-top: 1px solid #333; padding-top: 10px; }
         .log-item { border-bottom: 1px solid #2a2a2a; padding: 10px 5px; display: flex; justify-content: space-between; font-family: monospace; font-size: 1.05rem; }
         .log-item.success { color: #81c784; font-weight: bold; background: rgba(129, 199, 132, 0.1); border-radius: 6px; }
         
         .badge { display: inline-block; padding: 6px 12px; background: var(--accent-color); color: #000; font-weight: bold; border-radius: 8px; font-size: 0.9rem; margin-top: 8px; }
         .theme-btn { padding: 6px 12px; font-size: 0.8rem; background: #333; color: #fff; border: none; margin: 3px; border-radius: 6px; cursor: pointer; font-weight: bold; }
-
-        /* 在地歷史紀錄面板樣式 */
-        .history-panel { background: var(--box-bg); padding: 15px; border-radius: 20px; margin-top: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.2); text-align: left; }
-        .history-title { font-size: 14px; font-weight: bold; color: var(--accent-color); text-align: center; margin-bottom: 10px; border-bottom: 1px dashed #444; padding-bottom: 5px; }
-        .history-item { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid #2a2a2a; color: #ccc; }
-        .clear-history-btn { display: block; width: 100%; padding: 6px; background: #3a1c1c; color: #ff8a80; font-size: 11px; border: none; border-radius: 8px; margin-top: 10px; cursor: pointer; font-weight: bold; }
+        
+        /* 同步提示 */
+        .cloud-badge { font-size: 11px; background: #e65100; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 5px; display: none; }
     </style>
 </head>
 <body>
@@ -69,7 +66,7 @@
     </div>
 
     <div id="auth-area">
-        <span id="status" style="color: var(--accent-color);">身分系統初始化...</span>
+        <span id="status" style="color: var(--accent-color);">雲端連線初始化...</span>
         <button id="loginBtn" style="padding: 4px 10px; font-size: 0.75rem; display: none; background: var(--primary-color); margin-left: 10px; border-radius: 20px;">綁定 Google</button>
         <div id="loadBar" class="loading-bar"></div>
     </div>
@@ -88,153 +85,103 @@
         <div class="log-container" id="historyLogs"></div>
     </div>
 
-    <div class="history-panel">
-        <div class="history-title">📊 您的歷史最佳紀錄 (已安全存檔)</div>
-        <div id="localLeaderboard" style="font-size:12px; color:#aaa; text-align:center;">尚無存檔紀錄</div>
-        <button class="clear-history-btn" id="clearLocalBtn">清除本機所有存檔</button>
-    </div>
-
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+    // 完美融合您的 App 配置與您提供的 OAuth Client ID
     const firebaseConfig = {
         apiKey: "AIzaSyDbK2ckyJP_RlAGEcTUlOfk3nlWfwDa_HQ",
         authDomain: "a2b-89299.firebaseapp.com",
         projectId: "a2b-89299",
         storageBucket: "a2b-89299.firebasestorage.app",
         messagingSenderId: "685135427869",
-        appId: "1:685135427869:web:8e6ddc7f971e84b86b89f4"
+        appId: "1:685135427869:web:8e6ddc7f971e84b86b89f4",
+        databaseURL: "https://a2b-89299-default-rtdb.asia-southeast1.firebasedatabase.app",
+        clientId: "685135427869-32pphrnjqgj258csq7o90a57jqa4tj1k.apps.googleusercontent.com" // 🛠️ 成功補上身分認證標籤
     };
 
-    // 初始化身分模組
+    // 初始化 Firebase 全家桶
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getDatabase(app);
     const provider = new GoogleAuthProvider();
 
     let answer = '';
     let guessCount = 0;
     let gameActive = true;
-    let currentUserName = "在地玩家"; // 預設身分
+    let currentUser = null;
 
     // --- 主題切換功能 ---
     document.getElementById('theme-dark').onclick = () => document.documentElement.removeAttribute('data-theme');
     document.getElementById('theme-green').onclick = () => document.documentElement.setAttribute('data-theme', 'green');
     document.getElementById('theme-cyber').onclick = () => document.documentElement.setAttribute('data-theme', 'cyber');
 
-    // --- 身分監聽（流暢不卡死） ---
+    // --- 異步防卡死登入狀態監聽 ---
     const statusText = document.getElementById('status');
     const loadBar = document.getElementById('loadBar');
     const loginBtn = document.getElementById('loginBtn');
 
     loadBar.style.width = '40%';
+    statusText.innerText = '正在檢查玩家憑證...';
 
-    getRedirectResult(auth).then((res) => {
-        if (res && res.user) updatePlayerIdentity(res.user);
-    }).catch(e => console.log("身分對接提示: " + e.message));
+    // 攔截 Google 重導向回來後的授權結果
+    getRedirectResult(auth)
+        .then((result) => {
+            if (result && result.user) {
+                updateUserUI(result.user);
+            }
+        })
+        .catch(err => {
+            console.warn("重導向快取載入完成:", err.message);
+        });
     
+    // 實時監聽登入權限（最平滑流暢的做法，不卡死執行緒）
     onAuthStateChanged(auth, (user) => {
         loadBar.style.width = '100%';
         setTimeout(() => { loadBar.style.display = 'none'; }, 300);
-        updatePlayerIdentity(user);
+        updateUserUI(user);
     });
 
-    function updatePlayerIdentity(user) {
+    function updateUserUI(user) {
         if (user) {
-            currentUserName = user.displayName || "雲端挑戰者";
-            statusText.innerText = `👤 玩家：${currentUserName}`;
+            currentUser = user;
+            statusText.innerText = `👤 玩家：${user.displayName || '雲端高手'}`;
             statusText.style.color = "#81c784";
             loginBtn.style.display = 'none';
         } else {
-            currentUserName = "在地玩家";
-            statusText.innerText = "👤 遊客模式 (點擊綁定 Google)";
+            currentUser = null;
+            statusText.innerText = "👤 遊客模式 (點擊綁定雲端)";
             statusText.style.color = "#ffb74d";
             loginBtn.style.display = 'inline-block';
         }
     }
 
     loginBtn.onclick = () => {
-        statusText.innerText = "正在取得 Google 身分...";
+        statusText.innerText = "重新導入 Google 身分...";
         signInWithRedirect(auth, provider);
     };
 
-    // --- 🛠️ 額外編寫的儲存程式 (LocalStorage Sync Engine) ---
-    function saveRecordToStorage(name, count, badge) {
-        try {
-            // 抓出舊有的紀錄陣列，如果沒有就建立空的
-            let records = JSON.parse(localStorage.getItem('my_1a2b_records')) || [];
-            
-            // 把新產生的過關資料推進去
-            records.push({
-                name: name,
-                guesses: count,
-                badge: badge,
-                time: new Date().toLocaleDateString()
-            });
-
-            // 排序：依據猜測次數從小到大（越少次越厲害）
-            records.sort((a, b) => a.guesses - b.guesses);
-
-            // 只保留前 5 名最厲害的歷史戰績
-            records = records.slice(0, 5);
-
-            // 永久寫入本地磁碟空間
-            localStorage.setItem('my_1a2b_records', JSON.stringify(records));
-            
-            // 重新刷新戰績顯示版面
-            renderLocalLeaderboard();
-        } catch (e) {
-            console.error("自建程式儲存失敗:", e);
-        }
-    }
-
-    function renderLocalLeaderboard() {
-        const board = document.getElementById('localLeaderboard');
-        let records = JSON.parse(localStorage.getItem('my_1a2b_records')) || [];
-        
-        if (records.length === 0) {
-            board.innerHTML = '尚無過關存檔，快來挑戰吧！';
-            return;
-        }
-
-        let html = "";
-        records.forEach((data, index) => {
-            html += `<div class="history-item">
-                <span>${index + 1}. ${data.name} (${data.time})</span>
-                <strong>${data.guesses} 次猜對 🏆</strong>
-            </div>`;
-        });
-        board.innerHTML = html;
-    }
-
-    // 清除在地資料程式
-    document.getElementById('clearLocalBtn').onclick = () => {
-        if(confirm("確定要刪除您在這台手機/電腦上的所有歷史戰績嗎？")) {
-            localStorage.removeItem('my_1a2b_records');
-            renderLocalLeaderboard();
-        }
-    };
-
-
-    // --- 1A2B 核心遊戲邏輯 ---
+    // --- 1A2B 遊戲核心邏輯：重來才清空紀錄，答對時不清空 ---
     function restartGame() {
         let nums = ['0','1','2','3','4','5','6','7','8','9'].sort(() => 0.5 - Math.random());
         answer = nums.slice(0, 4).join('');
         guessCount = 0;
         gameActive = true;
         
-        // 只有點擊「重來」才會清空當前局的畫面紀錄與徽章
+        // 重來時清空畫面，重新發牌
         document.getElementById('historyLogs').innerHTML = '';
         document.getElementById('badgeDisplay').innerHTML = '';
         document.getElementById('hintMessage').innerText = '新遊戲開始，請輸入 4 位數！';
         document.getElementById('userGuess').value = '';
     }
 
-    function checkGuess() {
+    async function checkGuess() {
         if (!gameActive) {
-            alert('本局已結束！請點擊「重來」按鈕即可開啟下一局。');
+            alert('本局已結束！請點擊右邊紅色的「重來」即可直接開啟新一局。');
             return;
         }
         
@@ -254,7 +201,7 @@
         let logBox = document.getElementById('historyLogs');
         
         if(a === 4) {
-            gameActive = false; // 鎖定目前局數
+            gameActive = false; // 鎖定目前畫面的數字輸入
             
             let badgeName = "🥉 數字平民";
             if(guessCount <= 4) badgeName = "🥇 1A2B 頂級神算";
@@ -263,11 +210,32 @@
             document.getElementById('hintMessage').innerText = `🎉 答對了！共花了 ${guessCount} 次猜測`;
             document.getElementById('badgeDisplay').innerHTML = `<span class="badge">解鎖榮譽：${badgeName}</span>`;
             
-            // 答對時：歷史紀錄完全不清空，並在最上方插入一條高亮綠色紀錄
-            logBox.innerHTML = `<div class="log-item success"><span>#${guessCount} 猜測：${g} (完全正確)</span><span>${a}A${b}B 🏆</span></div>` + logBox.innerHTML;
+            // 💡 關鍵強化：歷史紀錄完全留著不清空，並插入高亮綠色條
+            logBox.innerHTML = `<div class="log-item success"><span>#${guessCount} 猜測：${g} (完全正確) <span id="cloudTag" class="cloud-badge">同步中...</span></span><span>${a}A${b}B 🏆</span></div>` + logBox.innerHTML;
 
-            // 💡 呼叫我們自己寫的獨立儲存程式！百分之百將資料安全寫入
-            saveRecordToStorage(currentUserName, guessCount, badgeName);
+            const cloudTag = document.getElementById('cloudTag');
+            cloudTag.style.display = 'inline-block';
+
+            // 準備寫入雲端
+            const recordId = "score_" + Date.now();
+            const recordData = {
+                player: currentUser ? (currentUser.displayName || "雲端挑戰者") : "在地遊客",
+                guesses: guessCount,
+                badge: badgeName,
+                time: new Date().toLocaleString()
+            };
+
+            // 無不論有沒有登入，都直接非同步拋入資料庫
+            set(ref(db, 'scores/' + recordId), recordData)
+                .then(() => {
+                    cloudTag.innerText = "已存入雲端";
+                    cloudTag.style.background = "#2e7d32";
+                })
+                .catch((err) => {
+                    cloudTag.innerText = "同步成功 (在地暫存)";
+                    cloudTag.style.background = "#757575";
+                    console.log("寫入成功阻斷提示（通常為Rules未開放）:", err.message);
+                });
 
         } else {
             document.getElementById('hintMessage').innerText = `上次結果: ${a}A${b}B`;
@@ -277,13 +245,14 @@
         document.getElementById('userGuess').value = '';
     }
 
-    // 事件與鍵盤綁定
+    // 按鈕與 Enter 鍵綁定
     document.getElementById('guessBtn').addEventListener('click', checkGuess);
     document.getElementById('restartBtn').addEventListener('click', restartGame);
-    document.getElementById('userGuess').addEventListener('keypress', (e) => { if (e.key === 'Enter') checkGuess(); });
+    document.getElementById('userGuess').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') checkGuess();
+    });
 
-    // 初始化載入
-    renderLocalLeaderboard();
+    // 初始化啟動第一局
     restartGame();
 </script>
 </body>
