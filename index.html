@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1A2B 遊戲中心 - 豪華排行版</title>
     <style>
+        /* 預設深色主題 */
         :root {
             --bg-color: #121212;
             --box-bg: #1e1e1e;
@@ -12,6 +13,7 @@
             --primary-color: #29b6f6;
             --accent-color: #ffb74d;
         }
+        /* 極光綠主題 */
         [data-theme="green"] {
             --bg-color: #0b130e;
             --box-bg: #142219;
@@ -19,6 +21,7 @@
             --primary-color: #4db6ac;
             --accent-color: #a7ffeb;
         }
+        /* 賽博朋克主題 */
         [data-theme="cyber"] {
             --bg-color: #1a0033;
             --box-bg: #2d0059;
@@ -50,7 +53,7 @@
     </div>
 
     <div id="auth-area">
-        <span id="status" style="color: var(--accent-color); font-weight: bold;">正在同步雲端狀態...</span>
+        <span id="status" style="color: #ffb74d; font-weight: bold;">正在同步雲端狀態...</span>
         <button id="loginBtn" style="padding: 4px 8px; font-size: 0.8rem; display: none;">綁定 Google</button>
     </div>
 
@@ -95,12 +98,12 @@
         let currentUser = null;
         let gameActive = true;
 
-        // --- 主題切換 ---
+        // --- 主題切換事件綁定 ---
         document.getElementById('theme-dark').onclick = () => document.documentElement.removeAttribute('data-theme');
         document.getElementById('theme-green').onclick = () => document.documentElement.setAttribute('data-theme', 'green');
         document.getElementById('theme-cyber').onclick = () => document.documentElement.setAttribute('data-theme', 'cyber');
 
-        // 💡 關鍵修正 1：主動、強制去撈取跳轉回來的登入結果，不依賴快取
+        // 撈取跳轉登入結果
         getRedirectResult(auth)
             .then((result) => {
                 if (result && result.user) {
@@ -108,7 +111,7 @@
                 }
             })
             .catch(err => {
-                console.error("登入回傳發生錯誤:", err.message);
+                console.error("登入錯誤:", err.message);
             });
         
         // 監聽登入狀態
@@ -116,7 +119,7 @@
             updateUserUI(user);
         });
 
-        // 💡 關鍵修正 2：統一抽出的 UI 更新函數，確保一辨識到 Google 身份就立刻拔掉訪客稱呼
+        // 💡 修正錯誤的地方：把變數語法錯誤改回正確的字串顏色
         function updateUserUI(user) {
             const statusText = document.getElementById('status');
             const loginBtn = document.getElementById('loginBtn');
@@ -128,14 +131,14 @@
             } else {
                 currentUser = null;
                 statusText.innerText = "遊客模式 (點擊綁定雲端)";
-                statusText.style.color = var(--accent-color);
+                statusText.style.color = "#ffb74d"; // 修正此處，避免語法崩潰
                 loginBtn.style.display = 'inline-block';
             }
         }
 
         document.getElementById('loginBtn').onclick = () => signInWithRedirect(auth, provider);
 
-        // --- 排行榜監聽 ---
+        // --- 排行榜即時監聽 ---
         const scoresRef = query(ref(db, 'scores'), orderByChild('guesses'), limitToFirst(10));
         onValue(scoresRef, (snapshot) => {
             let html = "";
