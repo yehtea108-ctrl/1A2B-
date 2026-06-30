@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>1A2B 猜數字遊戲</title>
+    <style>
+        /* 顏色主題定義 */
+        :root {
+            --bg-color: #f4f6f9;
+            --surface-color: #ffffff;
+            --text-color: #212529;
+            --primary-color: #007bff;
+            --border-color: #e2e8f0;
+            --success-color: #28a745;
+            --base-font-size: 16px;
+            --container-width: 480px;
+        }
+
+        /* 翡翠綠主題 */
+        [data-theme="emerald"] {
+            --bg-color: #f0f7f4;
+            --surface-color: #ffffff;
+            --text-color: #1a3024;
+            --primary-color: #10b981;
+            --border-color: #d1e7dd;
+            --success-color: #059669;
+        }
+
+        /* 薰衣草紫主題 */
+        [data-theme="lavender"] {
+            --bg-color: #f5f3ff;
+            --surface-color: #ffffff;
+            --text-color: #1e1b4b;
+            --primary-color: #8b5cf6;
+            --border-color: #ddd6fe;
+            --success-color: #7c3aed;
+        }
+
+        /* 曜石黑主題 */
+        [data-theme="obsidian"] {
+            --bg-color: #121214;
+            --surface-color: #1a1a1e;
+            --text-color: #e4e4e7;
+            --primary-color: #3b82f6;
+            --border-color: #2d2d34;
+            --success-color: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: var(--base-font-size);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* 載入畫面樣式 */
+        #loadingScreen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 16px;
+        }
+
+        .loading-text {
+            font-size: 1rem;
+            color: #555555;
+            letter-spacing: 2px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* 主遊戲容器 */
+        .container {
+            width: 100%;
+            max-width: var(--container-width);
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 28px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            transition: max-width 0.3s ease;
+        }
+
+        /* 頂部控制面板 */
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* 遊戲經濟與道具區 */
+        .game-status-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-color);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* 雲端同步區塊 */
+        .cloud-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px dashed var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+        }
+
+        /* 模組化按鈕 */
+        button {
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            background-color: var(--bg-color);
+        }
+
+        button:active {
+            transform: scale(0.96);
+        }
+
+        button.primary {
+            background-color: var(--primary-color);
+            color: #ffffff;
+            border: none;
+        }
+
+        button.primary:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* 商城與簽到面板 */
+        .feature-panel {
+            display: none;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .theme-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .theme-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: var(--surface-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+
+        .color-preview {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+
+        /* 核心遊戲區 */
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--surface-color);
+            color: var(--text-color);
+            font-size: 1.3rem;
+            text-align: center;
+            letter-spacing: 6px;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        /* 歷史紀錄與動畫 */
+        .history-container {
+            max-height: 220px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-bottom: 20px;
+            background-color: var(--surface-color);
+        }
+
+        .history-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 18px;
+            border-bottom: 1px solid var(--border-color);
+            animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            opacity: 0;
+            transform: translateY(-8px);
+        }
+
+        .history-item:last-child {
+            border-bottom: none;
+        }
+
+        @keyframes slideDown {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-tag {
+            font-weight: 700;
+            color: var(--primary-color);
+            letter-spacing: 1px;
+        }
+
+        .result-tag.win {
+            color: var(--success-color);
+        }
+
+        .status-message {
+            text-align: center;
+            margin-top: 12px;
+            min-height: 24px;
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+    <div id="loadingScreen">
+        <div class="spinner"></div>
+        <div class="loading-text">系統載入中</div>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <button onclick="changeSize(-2)">A-</button>
+                <button onclick="changeSize(2)">A+</button>
+                <button onclick="toggleWidth()">寬度切換</button>
+            </div>
+            <div class="control-group">
+                <button onclick="togglePanel('dailyPanel')">每日簽到</button>
+                <button onclick="togglePanel('shopPanel')">主題商城</button>
+                <button onclick="resetGame()" class="primary">新局</button>
+            </div>
+        </div>
+
+        <div class="game-status-bar">
+            <div>持有金幣: <span id="coinCount">0</span></div>
+            <div>目前主題: <span id="currentThemeName">經典藍</span></div>
+        </div>
+
+        <div id="dailyPanel" class="feature-panel">
+            <div class="panel-title">每日簽到獎勵</div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span id="checkInStatus">今日尚未簽到，簽到可獲得 50 金幣。</span>
+                <button id="checkInBtn" onclick="executeCheckIn()" class="primary">簽到完成</button>
+            </div>
+        </div>
+
+        <div id="shopPanel" class="feature-panel">
+            <div class="panel-title">道具主題解鎖</div>
+            <div class="theme-grid" id="themeGrid">
+                </div>
+        </div>
+
+        <div class="cloud-section">
+            <span id="cloudStatus">雲端連線狀態：未登入</span>
+            <div class="control-group">
+                <button id="loginBtn" onclick="handleAuthClick()">登入 Google</button>
+                <button id="saveBtn" onclick="uploadSaveData()" disabled>儲存</button>
+                <button id="loadBtn" onclick="downloadSaveData()" disabled>讀取</button>
+            </div>
+        </div>
+
+        <h1>1A2B 核心挑戰</h1>
+
+        <div class="input-section">
+            <input type="text" id="guessInput" maxlength="4" placeholder="輸入 4 位不重複數字" autocomplete="off">
+            <button onclick="submitGuess()" class="primary">送出</button>
+        </div>
+
+        <div class="history-container" id="historyContainer"></div>
+
+        <div class="status-message" id="statusMessage"></div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 【請在此處填寫您的 GOOGLE 憑證】
+        // ==========================================
+        var CLIENT_ID = '850178876253-t4v4rb9dnbf5vs0b6hc3r2bmpbmm7a4v.apps.googleusercontent.com'; 
+        // ==========================================
+        
+        var SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
+        var tokenClient;
+        var accessToken = null;
+        var cloudFileId = null;
+
+        var secretCode = '';
+        var isGameOver = false;
+        var fontSize = 16;
+        var isWide = false;
+        var currentGuesses = [];
+
+        var userCoins = 0;
+        var checkedInToday = false;
+        var unlockedThemes = ['classic'];
+        var currentActiveTheme = 'classic';
+
+        var themeData = [
+            { id: 'classic', name: '經典藍', color: '#007bff', price: 0 },
+            { id: 'emerald', name: '翡翠綠', color: '#10b981', price: 100 },
+            { id: 'lavender', name: '薰衣草紫', color: '#8b5cf6', price: 150 },
+            { id: 'obsidian', name: '曜石黑', color: '#3b82f6', price: 200 }
+        ];
+
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(function() {
+                var loader = document.getElementById('loadingScreen');
+                loader.style.opacity = '0';
+                loader.style.transform = 'scale(1.05)';
+                setTimeout(function() {
+                    loader.style.display = 'none';
+                }, 500);
+            }, 1200);
+
+            initGameSystem();
+        });
+
+        function initGameSystem() {
+            resetGame();
+            renderShop();
+            updateUI();
+            
+            try {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: CLIENT_ID,
+                    scope: SCOPES,
+                    callback: function(tokenResponse) {
+                        if (tokenResponse.error !== undefined) throw (tokenResponse);
+                        accessToken = tokenResponse.access_token;
+                        document.getElementById('cloudStatus').textContent = '雲端連線狀態：已就緒';
+                        document.getElementById('loginBtn').style.display = 'none';
+                        document.getElementById('saveBtn').disabled = false;
+                        document.getElementById('loadBtn').disabled = false;
+                        findSaveFile();
+                    },
+                });
+            } catch (e) {
+                console.log("Google SDK 獨立執行模式");
+            }
+        }
+
+        function togglePanel(panelId) {
+            var panel = document.getElementById(panelId);
+            var isVisible = panel.style.display === 'block';
+            document.getElementById('dailyPanel').style.display = 'none';
+            document.getElementById('shopPanel').style.display = 'none';
+            if (!isVisible) {
+                panel.style.display = 'block';
+            }
+        }
+
+        function executeCheckIn() {
+            if (checkedInToday) return;
+            userCoins += 50;
+            checkedInToday = true;
+            document.getElementById('checkInStatus').textContent = '今日已完成簽到，獎勵已發放。';
+            document.getElementById('checkInBtn').disabled = true;
+            updateUI();
+            renderShop();
+        }
+
+        function renderShop() {
+            var grid = document.getElementById('themeGrid');
+            grid.innerHTML = '';
+            
+            themeData.forEach(function(theme) {
+                var item = document.createElement('div');
+                item.className = 'theme-item';
+                var isUnlocked = unlockedThemes.includes(theme.id);
+                var btnHtml = '';
+                
+                if (isUnlocked) {
+                    if (currentActiveTheme === theme.id) {
+                        btnHtml = '<span style="font-size:0.8rem; color:var(--success-color);">套用中</span>';
+                    } else {
+                        btnHtml = '<button onclick="applyTheme(\'' + theme.id + '\')">套用</button>';
+                    }
+                } else {
+                    var canAfford = userCoins >= theme.price;
+                    btnHtml = '<button class="primary" ' + (canAfford ? '' : 'disabled') + ' onclick="buyTheme(\'' + theme.id + '\',' + theme.price + ')">' + theme.price + '金幣</button>';
+                }
+
+                item.innerHTML = '<div><span class="color-preview" style="background-color:' + theme.color + '"></span><span>' + theme.name + '</span></div>' + btnHtml;
+                grid.appendChild(item);
+            });
+        }
+
+        function buyTheme(themeId, price) {
+            if (userCoins >= price && !unlockedThemes.includes(themeId)) {
+                userCoins -= price;
+                unlockedThemes.push(themeId);
+                updateUI();
+                renderShop();
+            }
+        }
+
+        function applyTheme(themeId) {
+            currentActiveTheme = themeId;
+            var target = themeData.find(t => t.id === themeId);
+            document.getElementById('currentThemeName').textContent = target.name;
+            
+            if (themeId === 'classic') {
+                document.documentElement.removeAttribute('data-theme');
+            } else {
+                document.documentElement.setAttribute('data-theme', themeId);
+            }
+            renderShop();
+        }
+
+        function updateUI() {
+            document.getElementById('coinCount').textContent = userCoins;
+        }
+
+        function handleAuthClick() {
+            if (accessToken === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+
+        function findSaveFile() {
+            var url = 'https://www.googleapis.com/drive/3/files?spaces=appDataFolder&q=name=%27savegame.json%27';
+            fetch(url, { headers: { 'Authorization': 'Bearer ' + accessToken } })
+            .then(res => res.json())
+            .then(data => { if (data.files && data.files.length > 0) cloudFileId = data.files[0].id; })
+            .catch(err => console.error(err));
+        }
+
+        function uploadSaveData() {
+            if (!accessToken) return;
+            document.getElementById('cloudStatus').textContent = '雲端連線狀態：同步中...';
+
+            var saveData = {
+                secretCode: secretCode,
+                isGameOver: isGameOver,
+                currentGuesses: currentGuesses,
+                userCoins: userCoins,
+                unlockedThemes: unlockedThemes,
+                currentActiveTheme: currentActiveTheme,
+                checkedInToday: checkedInToday
+            };
+
+            var boundary = 'foo_bar_baz';
+            var delimiter = "\r\n--" + boundary + "\r\n";
+            var close_delim = "\r\n--" + boundary + "--";
+            var metadata = { 'name': 'savegame.json', 'mimeType': 'application/json' };
+            if (!cloudFileId) metadata['parents'] = ['appDataFolder'];
+
+            var multipartRequestBody = delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata) + delimiter + 'Content-Type: application/json\r\n\r\n' + JSON.stringify(saveData) + close_delim;
+            var url = 'https://www.googleapis.com/upload/drive/3/files' + (cloudFileId ? '/' + cloudFileId : '') + '?uploadType=multipart';
+
+            fetch(url, {
+                method: cloudFileId ? 'PATCH' : 'POST',
+                headers: { 'Authorization': 'Bearer ' + accessToken, 'Content-Type': 'multipart/related; boundary=' + boundary },
+                body: multipartRequestBody
+            })
+            .then(res => res.json())
+            .then(file => {
+                if(file.id) {
+                    cloudFileId = file.id;
+                    document.getElementById('cloudStatus').textContent = '雲端連線狀態：同步成功';
+                }
+            })
+            .catch(() => document.getElementById('cloudStatus').textContent = '雲端連線狀態：同步失敗');
+        }
+
+        function downloadSaveData() {
+            if (!accessToken || !cloudFileId) return;
+            document.getElementById('cloudStatus').textContent = '雲端連線狀態：下載中...';
+
+            fetch('https://www.googleapis.com/drive/3/files/' + cloudFileId + '?alt=media', {
+                headers: { 'Authorization': 'Bearer ' + accessToken }
+            })
+            .then(res => res.json())
+            .then(data => {
+                secretCode = data.secretCode;
+                isGameOver = data.isGameOver;
+                currentGuesses = data.currentGuesses || [];
+                userCoins = data.userCoins || 0;
+                unlockedThemes = data.unlockedThemes || ['classic'];
+                checkedInToday = data.checkedInToday || false;
+
+                var historyContainer = document.getElementById('historyContainer');
+                historyContainer.innerHTML = '';
+                
+                for (var i = 0; i < currentGuesses.length; i++) {
+                    var item = document.createElement('div');
+                    item.className = 'history-item';
+                    var isWin = (currentGuesses[i].a === 4);
+                    item.innerHTML = '<span>' + currentGuesses[i].guess + '</span><span class="result-tag ' + (isWin ? 'win' : '') + '">' + currentGuesses[i].a + 'A' + currentGuesses[i].b + 'B</span>';
+                    if (historyContainer.firstChild) historyContainer.insertBefore(item, historyContainer.firstChild);
+                    else historyContainer.appendChild(item);
+                }
+
+                if (checkedInToday) {
+                    document.getElementById('checkInStatus').textContent = '今日已完成簽到，獎勵已發放。';
+                    document.getElementById('checkInBtn').disabled = true;
+                }
+
+                updateUI();
+                applyTheme(data.currentActiveTheme || 'classic');
+                
+                var inputEl = document.getElementById('guessInput');
+                inputEl.disabled = isGameOver;
+                document.getElementById('statusMessage').textContent = isGameOver ? '正確答案，遊戲結束。' : '存檔載入完畢。';
+                document.getElementById('cloudStatus').textContent = '雲端連線狀態：已同步';
+            });
+        }
+
+        function resetGame() {
+            var digits = ['0','1','2','3','4','5','6','7','8','9'];
+            for (var i = digits.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = digits[i]; digits[i] = digits[j]; digits[j] = temp;
+            }
+            secretCode = digits.slice(0, 4).join('');
+            isGameOver = false;
+            currentGuesses = [];
+            document.getElementById('historyContainer').innerHTML = '';
+            document.getElementById('statusMessage').textContent = '新局開始，請輸入四位不重複數字。';
+            document.getElementById('statusMessage').style.color = 'var(--text-color)';
+            document.getElementById('guessInput').value = '';
+            document.getElementById('guessInput').disabled = false;
+        }
+
+        function submitGuess() {
+            if (isGameOver) return;
+            var inputEl = document.getElementById('guessInput');
+            var guess = inputEl.value.trim();
+
+            if (guess.length !== 4 || !/^\d+$/.test(guess) || (new Set(guess)).size !== 4) {
+                alert('請確認輸入的是4位不重複的數字。');
+                return;
+            }
+
+            var a = 0, b = 0;
+            for (var i = 0; i < 4; i++) {
+                if (guess[i] === secretCode[i]) a++;
+                else if (secretCode.indexOf(guess[i]) !== -1) b++;
+            }
+
+            currentGuesses.push({ guess: guess, a: a, b: b });
+
+            var container = document.getElementById('historyContainer');
+            var item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = '<span>' + guess + '</span><span class="result-tag ' + (a === 4 ? 'win' : '') + '">' + a + 'A' + b + 'B</span>';
+            
+            if (container.firstChild) container.insertBefore(item, container.firstChild);
+            else container.appendChild(item);
+            
+            inputEl.value = '';
+
+            if (a === 4) {
+                isGameOver = true;
+                inputEl.disabled = true;
+                document.getElementById('statusMessage').textContent = '正確答案，遊戲結束。';
+                document.getElementById('statusMessage').style.color = 'var(--success-color)';
+                userCoins += 20;
+                updateUI();
+                renderShop();
+            }
+        }
+
+        document.getElementById('guessInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') submitGuess();
+        });
+
+        function changeSize(offset) {
+            fontSize = Math.max(12, Math.min(24, fontSize + offset));
+            document.documentElement.style.setProperty('--base-font-size', fontSize + 'px');
+        }
+
+        function toggleWidth() {
+            isWide = !isWide;
+            document.documentElement.style.setProperty('--container-width', isWide ? '720px' : '480px');
+        }
+    </script>
+</body>
+</html>
