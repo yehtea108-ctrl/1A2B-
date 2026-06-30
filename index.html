@@ -2,11 +2,12 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>1A2B Game</title>
+    <title>1A2B 猜數字遊戲</title>
     <script>
         var GOOGLE_CLIENT_ID = '850178876253-t4v4rb9dnbf5vs0b6hc3r2bmpbmm7a4v.apps.googleusercontent.com';
     </script>
     <style>
+        /* 全黑深色背景主題 */
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
             padding: 20px; 
@@ -16,6 +17,8 @@
             color: #e0e0e0; 
         }
         h1, h3 { color: #ffffff; text-align: center; }
+        
+        /* 輸入區塊與按鈕 */
         .input-group { 
             margin: 20px 0; 
             display: flex; 
@@ -43,6 +46,8 @@
             border-radius: 8px; 
         }
         button:active { background-color: #0288d1; }
+        
+        /* 歷史紀錄區塊 */
         .history { 
             margin-top: 20px; 
             border-top: 1px solid #333; 
@@ -58,6 +63,8 @@
             margin-bottom: 5px; 
             border-radius: 6px; 
         }
+        
+        /* Google 登入區塊 */
         .google-space { 
             margin: 20px 0; 
             padding: 15px; 
@@ -77,23 +84,23 @@
 </head>
 <body>
 
-    <h1>1A2B Game</h1>
+    <h1>1A2B 猜數字</h1>
 
     <div class="google-space">
-        <button id="googleLoginBtn" onclick="clickGoogleLogin()" style="background-color: #4285F4; color: white;">Google Login</button>
+        <button id="googleLoginBtn" onclick="clickGoogleLogin()" style="background-color: #4285F4; color: white;">Google 帳號登入</button>
         <span id="loginStatus" style="margin-left: 10px; color: #4caf50;"></span>
     </div>
 
     <div class="input-group">
-        <input type="text" id="userGuess" maxlength="4" placeholder="4 digits" autocomplete="off">
-        <button onclick="checkGuess()">Guess</button>
-        <button onclick="restartGame()" style="background-color: #ef5350;">Reset</button>
+        <input type="text" id="userGuess" maxlength="4" placeholder="輸入4位數字" autocomplete="off">
+        <button onclick="checkGuess()">猜測</button>
+        <button onclick="restartGame()" style="background-color: #ef5350;">重來</button>
     </div>
 
     <div id="hintMessage"></div>
 
     <div class="history">
-        <h3>History:</h3>
+        <h3>試過的組合歷史紀錄：</h3>
         <div id="historyLogs"></div>
     </div>
 
@@ -114,7 +121,7 @@
                     scope: 'https://www.googleapis.com/auth/drive.appdata',
                     callback: function(response) {
                         if (response.access_token) {
-                            document.getElementById('loginStatus').textContent = '🟢 Connected';
+                            document.getElementById('loginStatus').textContent = '🟢 已連線';
                             document.getElementById('googleLoginBtn').style.display = 'none';
                         }
                     }
@@ -126,7 +133,7 @@
             if (tokenClient) {
                 tokenClient.requestAccessToken();
             } else {
-                alert('HTTPS required for Google Login.');
+                alert('必須在網頁伺服器環境（HTTPS）才能執行 Google 登入。');
             }
         }
 
@@ -136,7 +143,7 @@
             answer = numbers.slice(0, 4).join('');
             gameOver = false;
             document.getElementById('historyLogs').innerHTML = '';
-            document.getElementById('hintMessage').textContent = 'Game started! Enter 4 unique digits.';
+            document.getElementById('hintMessage').textContent = '新遊戲開始！請輸入4個不重複數字。';
             document.getElementById('userGuess').value = '';
             document.getElementById('userGuess').disabled = false;
         }
@@ -148,7 +155,7 @@
             var guess = inputEl.value.trim();
 
             if (guess.length !== 4 || !/^\d+$/.test(guess) || (new Set(guess)).size !== 4) {
-                alert('Enter 4 unique digits!');
+                alert('請輸入4位「不重複」的數字！');
                 return;
             }
 
@@ -165,7 +172,7 @@
             var logBox = document.getElementById('historyLogs');
             var item = document.createElement('div');
             item.className = 'history-item';
-            item.innerHTML = '<span>Guess: <strong>' + guess + '</strong></span> <span style="color:#ff5252; font-weight:bold;">' + a + 'A' + b + 'B</span>';
+            item.innerHTML = '<span>猜測：<strong>' + guess + '</strong></span> <span style="color:#ff5252; font-weight:bold;">' + a + 'A' + b + 'B</span>';
             logBox.insertBefore(item, logBox.firstChild);
 
             inputEl.value = '';
@@ -174,9 +181,9 @@
                 gameOver = true;
                 inputEl.disabled = true;
                 document.getElementById('hintMessage').style.color = '#66bb6a';
-                document.getElementById('hintMessage').textContent = '🎉 Win! Answer is ' + answer;
+                document.getElementById('hintMessage').textContent = '🎉 恭喜答對！答案就是 ' + answer;
             } else {
-                document.getElementById('hintMessage').textContent = 'Keep going...';
+                document.getElementById('hintMessage').textContent = '持續挑戰中...';
             }
         }
 
