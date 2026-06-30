@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>1A2B Game</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
+        .input-group { margin: 20px 0; }
+        input { padding: 8px; font-size: 16px; width: 150px; text-align: center; }
+        button { padding: 8px 12px; font-size: 16px; cursor: pointer; }
+        .history { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; }
+        .history-item { padding: 6px 0; border-bottom: 1px solid #eee; }
+        .google-space { margin: 20px 0; padding: 15px; border: 1px dashed #4285F4; text-align: center; }
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+    <h1>1A2B Game</h1>
+
+    <div class="google-space">
+        <button id="googleLoginBtn" onclick="clickGoogleLogin()">Google Login</button>
+        <span id="loginStatus" style="margin-left: 10px;"></span>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="userGuess" maxlength="4" placeholder="4 digits" autocomplete="off">
+        <button onclick="checkGuess()">Guess</button>
+        <button onclick="restartGame()" style="margin-left: 10px;">Reset</button>
+    </div>
+
+    <div id="hintMessage" style="font-weight: bold; color: blue;"></div>
+
+    <div class="history">
+        <h3>History:</h3>
+        <div id="historyLogs"></div>
+    </div>
+
+    <script>
+        var GOOGLE_CLIENT_ID = '850178876253-t4v4rb9dnbf5vs0b6hc3r2bmpbmm7a4v.apps.googleusercontent.com';
+        var answer = '';
+        var gameOver = false;
+        var tokenClient;
+
+        window.onload = function() {
+            restartGame();
+            initGoogleAuth();
+        };
+
+        function initGoogleAuth() {
+            try {
+                tokenClient = google.accounts.oauth2.initTokenClient({
+                    client_id: GOOGLE_CLIENT_ID,
+                    scope: 'https://www.googleapis.com/auth/drive.appdata',
+                    callback: function(response) {
+                        if (response.access_token) {
+                            document.getElementById('loginStatus').textContent = 'Connected';
+                            document.getElementById('googleLoginBtn').style.display = 'none';
+                        }
+                    }
+                });
+            } catch(e) {}
+        }
+
+        function clickGoogleLogin() {
+            if (tokenClient) {
+                tokenClient.requestAccessToken();
+            } else {
+                alert('HTTPS required for Google Login.');
+            }
+        }
+
+        function restartGame() {
+            var numbers = ['0','1','2','3','4','5','6','7','8','9'];
+            numbers.sort(function() { return 0.5 - Math.random(); });
+            answer = numbers.slice(0, 4).join('');
+            gameOver = false;
+            document.getElementById('historyLogs').innerHTML = '';
+            document.getElementById('hintMessage').textContent = 'Game started!';
+            document.getElementById('userGuess').value = '';
+            document.getElementById('userGuess').disabled = false;
+        }
+
+        function checkGuess() {
+            if (gameOver) return;
+
+            var inputEl = document.getElementById('userGuess');
+            var guess = inputEl.value.trim();
+
+            if (guess.length !== 4 || !/^\d+$/.test(guess) || (new Set(guess)).size !== 4) {
+                alert('Enter 4 unique digits!');
+                return;
+            }
+
+            var a = 0;
+            var b = 0;
+            for (var i = 0; i < 4; i++) {
+                if (guess[i] === answer[i]) {
+                    a++;
+                } else if (answer.indexOf(guess[i]) !== -1) {
+                    b++;
+                }
+            }
+
+            var logBox = document.getElementById('historyLogs');
+            var item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = 'Guess: <strong>' + guess + '</strong> -> Result: <span style="color:red;">' + a + 'A' + b + 'B</span>';
+            logBox.insertBefore(item, logBox.firstChild);
+
+            inputEl.value = '';
+
+            if (a === 4) {
+                gameOver = true;
+                inputEl.disabled = true;
+                document.getElementById('hintMessage').textContent = 'Win! Answer is ' + answer;
+            }
+        }
+
+        document.getElementById('userGuess').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') checkGuess();
+        });
+    </script>
+</body>
+</html>
