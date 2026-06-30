@@ -1,16 +1,77 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
     <meta charset="UTF-8">
-    <title>index.html</title>
+    <title>1A2B Game</title>
+    <script>
+        var GOOGLE_CLIENT_ID = '850178876253-t4v4rb9dnbf5vs0b6hc3r2bmpbmm7a4v.apps.googleusercontent.com';
+    </script>
     <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 400px; margin: 0 auto; }
-        .input-group { margin: 20px 0; }
-        input { padding: 8px; font-size: 16px; width: 150px; text-align: center; }
-        button { padding: 8px 12px; font-size: 16px; cursor: pointer; }
-        .history { margin-top: 20px; border-top: 1px solid #ccc; padding-top: 10px; }
-        .history-item { padding: 6px 0; border-bottom: 1px solid #eee; }
-        .google-space { margin: 20px 0; padding: 15px; border: 1px dashed #4285F4; text-align: center; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            padding: 20px; 
+            max-width: 400px; 
+            margin: 0 auto; 
+            background-color: #121212; 
+            color: #e0e0e0; 
+        }
+        h1, h3 { color: #ffffff; text-align: center; }
+        .input-group { 
+            margin: 20px 0; 
+            display: flex; 
+            justify-content: center; 
+            gap: 10px; 
+        }
+        input { 
+            padding: 10px; 
+            font-size: 16px; 
+            width: 140px; 
+            text-align: center; 
+            background-color: #1e1e1e; 
+            border: 1px solid #333; 
+            color: #fff; 
+            border-radius: 8px; 
+        }
+        button { 
+            padding: 10px 16px; 
+            font-size: 16px; 
+            cursor: pointer; 
+            background-color: #29b6f6; 
+            border: none; 
+            color: #000; 
+            font-weight: bold; 
+            border-radius: 8px; 
+        }
+        button:active { background-color: #0288d1; }
+        .history { 
+            margin-top: 20px; 
+            border-top: 1px solid #333; 
+            padding-top: 10px; 
+        }
+        .history-item { 
+            padding: 8px 10px; 
+            border-bottom: 1px solid #222; 
+            font-size: 16px; 
+            display: flex; 
+            justify-content: space-between; 
+            background-color: #1a1a1a; 
+            margin-bottom: 5px; 
+            border-radius: 6px; 
+        }
+        .google-space { 
+            margin: 20px 0; 
+            padding: 15px; 
+            border: 1px dashed #4285F4; 
+            text-align: center; 
+            background-color: #1a237e; 
+            border-radius: 8px; 
+        }
+        #hintMessage { 
+            text-align: center; 
+            font-weight: bold; 
+            color: #ffb74d; 
+            margin: 10px 0; 
+        }
     </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -19,17 +80,17 @@
     <h1>1A2B Game</h1>
 
     <div class="google-space">
-        <button id="googleLoginBtn" onclick="clickGoogleLogin()">Google Login</button>
-        <span id="loginStatus" style="margin-left: 10px;"></span>
+        <button id="googleLoginBtn" onclick="clickGoogleLogin()" style="background-color: #4285F4; color: white;">Google Login</button>
+        <span id="loginStatus" style="margin-left: 10px; color: #4caf50;"></span>
     </div>
 
     <div class="input-group">
         <input type="text" id="userGuess" maxlength="4" placeholder="4 digits" autocomplete="off">
         <button onclick="checkGuess()">Guess</button>
-        <button onclick="restartGame()" style="margin-left: 10px;">Reset</button>
+        <button onclick="restartGame()" style="background-color: #ef5350;">Reset</button>
     </div>
 
-    <div id="hintMessage" style="font-weight: bold; color: blue;"></div>
+    <div id="hintMessage"></div>
 
     <div class="history">
         <h3>History:</h3>
@@ -37,7 +98,6 @@
     </div>
 
     <script>
-        var GOOGLE_CLIENT_ID = '850178876253-t4v4rb9dnbf5vs0b6hc3r2bmpbmm7a4v.apps.googleusercontent.com';
         var answer = '';
         var gameOver = false;
         var tokenClient;
@@ -54,7 +114,7 @@
                     scope: 'https://www.googleapis.com/auth/drive.appdata',
                     callback: function(response) {
                         if (response.access_token) {
-                            document.getElementById('loginStatus').textContent = 'Connected';
+                            document.getElementById('loginStatus').textContent = '🟢 Connected';
                             document.getElementById('googleLoginBtn').style.display = 'none';
                         }
                     }
@@ -76,7 +136,7 @@
             answer = numbers.slice(0, 4).join('');
             gameOver = false;
             document.getElementById('historyLogs').innerHTML = '';
-            document.getElementById('hintMessage').textContent = 'Game started!';
+            document.getElementById('hintMessage').textContent = 'Game started! Enter 4 unique digits.';
             document.getElementById('userGuess').value = '';
             document.getElementById('userGuess').disabled = false;
         }
@@ -105,7 +165,7 @@
             var logBox = document.getElementById('historyLogs');
             var item = document.createElement('div');
             item.className = 'history-item';
-            item.innerHTML = 'Guess: <strong>' + guess + '</strong> -> Result: <span style="color:red;">' + a + 'A' + b + 'B</span>';
+            item.innerHTML = '<span>Guess: <strong>' + guess + '</strong></span> <span style="color:#ff5252; font-weight:bold;">' + a + 'A' + b + 'B</span>';
             logBox.insertBefore(item, logBox.firstChild);
 
             inputEl.value = '';
@@ -113,7 +173,10 @@
             if (a === 4) {
                 gameOver = true;
                 inputEl.disabled = true;
-                document.getElementById('hintMessage').textContent = 'Win! Answer is ' + answer;
+                document.getElementById('hintMessage').style.color = '#66bb6a';
+                document.getElementById('hintMessage').textContent = '🎉 Win! Answer is ' + answer;
+            } else {
+                document.getElementById('hintMessage').textContent = 'Keep going...';
             }
         }
 
